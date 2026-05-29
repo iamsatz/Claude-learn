@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Understanding ECC — A Beginner's Course</title>
+<style>
+  :root{
+    --bg:#0f1020; --panel:#16182e; --card:#1c1f3a; --ink:#e8e9f3;
+    --muted:#a7abc7; --line:#2a2e4f; --accent:#7c5cff; --accent2:#22d3ee;
+    --good:#34d399; --warn:#fbbf24; --maxw:820px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:linear-gradient(180deg,#0c0d1a,#0f1020 240px);
+    color:var(--ink); font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent2); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{background:#0c0d1a; padding:.12em .4em; border-radius:6px; font-size:.88em;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; color:#ffd6a5; border:1px solid var(--line)}
+  pre{background:#0a0b16; border:1px solid var(--line); border-radius:12px; padding:16px;
+    overflow:auto; font-size:.86em; line-height:1.6}
+  pre code{background:none;border:none;padding:0;color:#cfe3ff}
+
+  /* layout */
+  .wrap{display:flex; gap:0; min-height:100vh}
+  .side{
+    width:280px; flex:0 0 280px; position:sticky; top:0; height:100vh; overflow:auto;
+    background:var(--panel); border-right:1px solid var(--line); padding:26px 20px;
+  }
+  .brand{font-weight:800; font-size:1.05rem; letter-spacing:.2px; margin:0 0 4px}
+  .brand span{color:var(--accent)}
+  .sub{color:var(--muted); font-size:.82rem; margin:0 0 22px}
+  .nav a{display:block; color:var(--muted); padding:9px 12px; border-radius:9px; font-size:.92rem; margin-bottom:2px}
+  .nav a:hover{background:var(--card); color:var(--ink); text-decoration:none}
+  .nav a .n{display:inline-block; width:22px; color:var(--accent); font-weight:700}
+  .main{flex:1; min-width:0; padding:0 28px}
+  .inner{max-width:var(--maxw); margin:0 auto; padding:56px 0 120px}
+
+  /* hero */
+  .hero{padding:64px 0 30px; border-bottom:1px solid var(--line); margin-bottom:40px}
+  .kicker{display:inline-block; font-size:.74rem; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--accent2); border:1px solid var(--line); padding:5px 11px; border-radius:999px; margin-bottom:18px}
+  h1{font-size:2.5rem; line-height:1.1; margin:0 0 14px; letter-spacing:-.02em}
+  .lead{font-size:1.12rem; color:var(--muted); max-width:640px; margin:0}
+
+  section{padding:46px 0; border-bottom:1px solid var(--line)}
+  section:last-child{border-bottom:none}
+  h2{font-size:1.7rem; margin:0 0 6px; letter-spacing:-.01em; scroll-margin-top:24px}
+  h2 .chip{font-size:.72rem; color:var(--accent); border:1px solid var(--line); border-radius:6px; padding:3px 8px; vertical-align:middle; margin-right:10px}
+  h3{font-size:1.12rem; margin:30px 0 6px; color:#fff}
+  .tag{font-size:.8rem; color:var(--muted); margin:0 0 18px}
+  p{margin:12px 0}
+
+  .box{border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:20px 0; background:var(--card)}
+  .box.plain{border-left:3px solid var(--accent)}
+  .box.git{border-left:3px solid var(--accent2)}
+  .box.quiz{border-left:3px solid var(--good)}
+  .box .lbl{font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:0 0 8px}
+
+  details{background:#0c0d1a; border:1px solid var(--line); border-radius:10px; padding:0 14px; margin:10px 0}
+  details[open]{padding-bottom:12px}
+  summary{cursor:pointer; padding:12px 0; font-weight:600; color:var(--accent2); list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▶"; font-size:.7em; margin-right:9px; color:var(--accent)}
+  details[open] summary::before{content:"▼"}
+  .q{font-weight:600; margin:18px 0 4px}
+
+  table{border-collapse:collapse; width:100%; margin:18px 0; font-size:.92rem}
+  th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top}
+  th{background:#0c0d1a; color:#fff}
+  ol,ul{padding-left:22px}
+  li{margin:5px 0}
+  .ex{background:#13261f; border:1px solid #1f5140; border-left:3px solid var(--good); border-radius:12px; padding:16px 18px; margin:18px 0}
+  .ex .lbl{color:#9af0c8}
+  .warn{background:#2a2310; border:1px solid #5a4a14; border-left:3px solid var(--warn); border-radius:12px; padding:14px 18px; margin:18px 0; color:#ffe9b3}
+  .foot{color:var(--muted); font-size:.85rem; padding:40px 0; text-align:center}
+  .pill{display:inline-block; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-size:.8rem; color:var(--muted); margin:4px 6px 0 0}
+
+  @media(max-width:880px){
+    .wrap{flex-direction:column}
+    .side{position:static; width:auto; height:auto; flex:none; border-right:none; border-bottom:1px solid var(--line)}
+    .side .nav{display:flex; flex-wrap:wrap; gap:4px}
+    .nav a{margin:0}
+    h1{font-size:2rem}
+    .main{padding:0 18px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="side">
+    <p class="brand">Understanding <span>ECC</span></p>
+    <p class="sub">A beginner's course · no coding needed</p>
+    <nav class="nav">
+      <a href="#top"><span class="n">★</span>Start here</a>
+      <a href="#ch1"><span class="n">1</span>What is ECC?</a>
+      <a href="#ch2"><span class="n">2</span>The building blocks</a>
+      <a href="#ch3"><span class="n">3</span>Skills in depth</a>
+      <a href="#ch4"><span class="n">4</span>Agents &amp; commands</a>
+      <a href="#ch5"><span class="n">5</span>Rules &amp; hooks</a>
+      <a href="#ch6"><span class="n">6</span>MCP, memory &amp; learning</a>
+      <a href="#ch7"><span class="n">7</span>Installing ECC</a>
+      <a href="#ch8"><span class="n">8</span>Build your own</a>
+      <a href="#glossary"><span class="n">≡</span>Glossary</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+  <div class="inner" id="top">
+
+    <header class="hero">
+      <span class="kicker">Beginner friendly · interactive</span>
+      <h1>Understanding ECC</h1>
+      <p class="lead">A friendly course that explains what the <a href="https://github.com/affaan-m/ECC" target="_blank" rel="noopener">ECC repo</a> is, teaches a little <strong>git</strong> in every chapter, and ends with <strong>you building your own first tool</strong>. Written for a designer new to code.</p>
+      <div>
+        <span class="pill">8 chapters</span>
+        <span class="pill">Quizzes with answers</span>
+        <span class="pill">Hands-on exercises</span>
+        <span class="pill">Git, explained simply</span>
+      </div>
+      <div class="box plain" style="margin-top:26px">
+        <p class="lbl">In one sentence</p>
+        <p style="margin:0">ECC is a big, free <strong>toolbox of ready-made instructions</strong> that make AI coding assistants smarter — it bundles together <em>agents, skills, commands, rules, hooks,</em> and external tool connections (<em>MCP</em>). By the end you'll understand each word and have made your own.</p>
+      </div>
+      <p class="tag" style="margin-top:18px">Tip: quiz answers are hidden — click <strong>“Show answer”</strong> to reveal them.</p>
+    </header>
+
+    <!-- CH1 -->
+    <section id="ch1">
+      <h2><span class="chip">Ch 1</span>What is ECC?</h2>
+      <p class="tag">The big picture · Git: what a repository is, <code>git clone</code></p>
+
+      <div class="box plain"><p class="lbl">In plain words</p>
+        <p>Imagine you hired a talented assistant who doesn't yet know <em>your</em> preferences or process. Now imagine someone handed you a <strong>giant binder</strong> of ready-made “how we do it” cards, specialist helpers, and automatic checklists. Hand it over and your assistant instantly works like a pro.</p>
+        <p><strong>ECC is that binder — for AI coding assistants.</strong> Its tagline is “the harness-native operator system for agentic work.” Just remember: <strong>ECC = a big shared toolbox that upgrades AI assistants.</strong></p>
+        <p>Designer analogy: ECC is like a <strong>design system</strong> (a Figma library of components, tokens, and rules). Instead of designing every button from scratch, you pull from the library.</p>
+      </div>
+
+      <h3>How ECC actually does it</h3>
+      <p>ECC is a <strong>repository</strong> on GitHub. Inside it packs: <strong>63 agents</strong>, <strong>249 skills</strong>, <strong>79 commands</strong>, <strong>34 rule sets</strong>, plus hooks, MCP configs, and a memory/learning system. It's free and open-source (MIT) and works across many “harnesses” — the apps that host AI assistants (Claude Code, Cursor, Codex, OpenCode…).</p>
+
+      <div class="box git"><p class="lbl">Git in this chapter — what &amp; why</p>
+        <p><strong>Word of the day: <em>repository</em> (repo).</strong> A repository is a project folder that <strong>git</strong> watches — git remembers every saved version forever. Designers “Save As v1, v2, v3…”; git does that automatically.</p>
+        <p>To get your own copy of any repo, you <em>clone</em> it:</p>
+        <pre><code>git clone https://github.com/affaan-m/ECC.git</code></pre>
+        <p><code>clone</code> = “download the entire project, history and all, into a new folder.” It's the first step of using almost any project.</p>
+      </div>
+
+      <div class="box quiz"><p class="lbl">Check your understanding</p>
+        <p class="q">Q1. In one sentence, what is ECC?</p>
+        <details><summary>Show answer</summary>A big, shared, open-source toolbox of ready-made upgrades (skills, agents, commands, rules, hooks, integrations) that make AI coding assistants smarter and more consistent.</details>
+        <p class="q">Q2. What does “repository” mean?</p>
+        <details><summary>Show answer</summary>A project folder that git tracks — it remembers every saved version of the folder.</details>
+        <p class="q">Q3. What does <code>git clone</code> do?</p>
+        <details><summary>Show answer</summary>It downloads a full copy of a repository (all files and its history) onto a computer.</details>
+        <div class="ex"><p class="lbl">Hands-on</p>Open <a href="https://github.com/affaan-m/ECC" target="_blank" rel="noopener">github.com/affaan-m/ECC</a> and find the folder list (<code>agents/</code>, <code>skills/</code>…). Note which folder you're most curious about.</div>
+      </div>
+    </section>
+
+    <!-- CH2 -->
+    <section id="ch2">
+      <h2><span class="chip">Ch 2</span>The Six Building Blocks</h2>
+      <p class="tag">The 6 parts of ECC · Git: folders map to features</p>
+
+      <div class="box plain"><p class="lbl">In plain words</p>
+        <p>A design system isn't one thing — it's colors, components, type rules, and plugins. ECC is the same: <strong>six kinds of parts</strong>, each with one job.</p>
+        <table>
+          <tr><th>Part</th><th>Its job</th><th>Design analogy</th></tr>
+          <tr><td>Agents</td><td>Specialist helpers the AI delegates to</td><td>Calling in a freelancer</td></tr>
+          <tr><td>Skills</td><td>Cards the AI grabs <em>automatically</em></td><td>A labeled swatch drawer</td></tr>
+          <tr><td>Commands</td><td>Shortcuts <em>you</em> type</td><td>A keyboard shortcut</td></tr>
+          <tr><td>Rules</td><td>Always-follow guidelines</td><td>Brand non-negotiables</td></tr>
+          <tr><td>Hooks</td><td>Automatic actions on an event</td><td>Auto-rename on export</td></tr>
+          <tr><td>MCP</td><td>Connections to outside tools</td><td>A Figma plugin</td></tr>
+        </table>
+      </div>
+
+      <h3>How ECC actually does it</h3>
+      <p>The clever, simple idea: <strong>each kind of part lives in its own folder.</strong></p>
+      <pre><code>ECC/
+├── agents/        ← 63 specialist helpers
+├── skills/        ← 249 instruction cards   (the main surface)
+├── commands/      ← 79 typed shortcuts
+├── rules/         ← 34 guideline sets (by language)
+├── hooks/         ← automatic actions
+├── mcp-configs/   ← outside-tool connections
+└── scripts/       ← small programs the hooks run</code></pre>
+      <p>The folder names <strong>are</strong> the feature list — you can understand a project's shape just by reading them. ECC calls <strong>skills</strong> “the primary surface going forward,” which is why Chapter 3 focuses on them.</p>
+
+      <div class="box git"><p class="lbl">Git in this chapter — what &amp; why</p>
+        <p><strong>A repo's folder structure is information.</strong> Just browsing a project's folders tells you what it can do. Clicking into a folder on GitHub is the visual version of:</p>
+        <pre><code>ls          # list files/folders here
+ls skills   # list what's inside the skills folder</code></pre>
+        <p><code>ls</code> means “list.” When <em>you</em> build your own toolbox later, clearly named folders are what make it understandable.</p>
+      </div>
+
+      <div class="box quiz"><p class="lbl">Check your understanding</p>
+        <p class="q">Q1. Match: Skill, Command, Hook → (a) fires automatically, (b) AI grabs it on its own, (c) you type it.</p>
+        <details><summary>Show answer</summary>Skill = (b) · Command = (c) · Hook = (a).</details>
+        <p class="q">Q2. How can you guess what a project does before reading its code?</p>
+        <details><summary>Show answer</summary>Read its folder names — well-organized repos name folders by purpose.</details>
+        <p class="q">Q3. Which part is ECC's “primary surface going forward”?</p>
+        <details><summary>Show answer</summary>Skills.</details>
+        <div class="ex"><p class="lbl">Hands-on</p>Click into ECC's <code>skills/</code> and <code>agents/</code> folders. Notice the hyphenated names like <code>api-design</code>, <code>code-reviewer</code>.</div>
+      </div>
+    </section>
+
+    <!-- CH3 -->
+    <section id="ch3">
+      <h2><span class="chip">Ch 3</span>Skills in Depth</h2>
+      <p class="tag">What a skill really is · Git: <code>add</code> + <code>commit</code></p>
+
+      <div class="box plain"><p class="lbl">In plain words</p>
+        <p>A <strong>skill</strong> is a <strong>labeled instruction card</strong> you write once. The AI reads only the <em>label</em> of every card all the time, and when a task matches, it <strong>pulls out that card by itself</strong>. You never say “use the card” — recognition is automatic.</p>
+        <p>Designer analogy: a well-labeled <strong>swatch drawer</strong>. You read the tab (“Brand Blues”) and open it when needed. The skill's <em>label</em> is the tab; the <em>card inside</em> is the how-to. ECC ships 249 of these.</p>
+      </div>
+
+      <h3>How ECC actually does it</h3>
+      <p>A skill is simply <strong>a folder with a file called <code>SKILL.md</code></strong> inside. The <code>.md</code> means Markdown (plain text with light formatting). It has two parts:</p>
+      <p><strong>Part 1 — the label (“frontmatter”)</strong>, fenced by <code>---</code> lines:</p>
+      <pre><code>---
+name: api-design
+description: Use when designing a new web API — endpoints, naming, versioning.
+---</code></pre>
+      <p><code>name</code> = what it's called. <code>description</code> = <em>when</em> to use it — <strong>this is the line the AI scans</strong> to decide whether to grab the card.</p>
+      <p><strong>Part 2 — the instructions (the “body”)</strong>, in plain English:</p>
+      <pre><code># API Design
+
+When designing an API:
+1. Use nouns for resource names, not verbs.
+2. Version every endpoint, e.g. /v1/users.
+3. Return clear error messages with a code and a message.</code></pre>
+      <p>That's a complete skill — <strong>no programming required to start.</strong></p>
+
+      <div class="box git"><p class="lbl">Git in this chapter — what &amp; why</p>
+        <p><strong><em>Committing</em> — saving a snapshot.</strong> To make a skill part of the project permanently, you commit it:</p>
+        <pre><code>git add skills/api-design/SKILL.md     # stage: include in next snapshot
+git commit -m "Add api-design skill"   # save the snapshot with a message</code></pre>
+        <p><code>git add</code> picks which changes go in (like selecting layers before exporting). <code>git commit</code> takes the labeled snapshot. Good messages keep ECC's ~2,000-commit history readable.</p>
+      </div>
+
+      <div class="box quiz"><p class="lbl">Check your understanding</p>
+        <p class="q">Q1. What two parts does every <code>SKILL.md</code> have?</p>
+        <details><summary>Show answer</summary>(1) Frontmatter — a label with <code>name</code> and <code>description</code>, fenced by <code>---</code>. (2) Body — the plain-English instructions.</details>
+        <p class="q">Q2. Which part tells the AI <em>when</em> to use the skill?</p>
+        <details><summary>Show answer</summary>The <code>description</code> in the frontmatter.</details>
+        <p class="q">Q3. Do you need to know programming to write a basic skill?</p>
+        <details><summary>Show answer</summary>No — it's plain-English instructions in a text file.</details>
+        <div class="ex"><p class="lbl">Hands-on</p>Draft a skill label for something <em>you</em> do: <code>name: ______</code> / <code>description: Use when ______</code>. Keep it focused on <em>when</em>.</div>
+      </div>
+    </section>
+
+    <!-- CH4 -->
+    <section id="ch4">
+      <h2><span class="chip">Ch 4</span>Agents &amp; Commands</h2>
+      <p class="tag">Helpers vs. shortcuts · Git: reading history with <code>git log</code></p>
+
+      <div class="box plain"><p class="lbl">In plain words</p>
+        <p><strong>Agent</strong> = a <strong>specialist you delegate to.</strong> The main AI hands a focused job to an agent who works and reports back. Analogy: bringing in a <strong>retoucher</strong> for one photo.</p>
+        <p><strong>Command</strong> = a <strong>shortcut you type</strong>, like <code>/plan</code>. Analogy: a keyboard shortcut — nothing happens until you press it.</p>
+        <table>
+          <tr><th>Helper</th><th>Who decides to use it?</th></tr>
+          <tr><td>Skill</td><td>The <strong>AI</strong>, automatically</td></tr>
+          <tr><td>Command</td><td><strong>You</strong>, by typing it</td></tr>
+          <tr><td>Agent</td><td>The <strong>AI</strong>, by delegating</td></tr>
+        </table>
+      </div>
+
+      <h3>How ECC actually does it</h3>
+      <p><strong>63 agents</strong> (<code>agents/</code>): e.g. <code>code-reviewer</code>, <code>architect</code>, <code>security-reviewer</code> — each narrow in scope so it does one job well. <strong>79 commands</strong> (<code>commands/</code>): e.g. <code>/plan</code>, <code>/code-review</code>, <code>/build-fix</code>. ECC is transitioning to <strong>“skills-first”</strong> — new capability arrives as auto-grabbed skills, with commands kept for backward compatibility.</p>
+
+      <div class="box git"><p class="lbl">Git in this chapter — what &amp; why</p>
+        <p><strong>Reading a project's history with <code>git log</code>.</strong> ECC has ~2,000 commits — a story of every change.</p>
+        <pre><code>git log --oneline</code></pre>
+        <p>One line per commit (message + ID). Skim it to learn what a project is focused on. On GitHub this is the “commits” page / a file's “History” button. ECC keeps a single <code>main</code> branch.</p>
+      </div>
+
+      <div class="box quiz"><p class="lbl">Check your understanding</p>
+        <p class="q">Q1. Who triggers an agent, and who triggers a command?</p>
+        <details><summary>Show answer</summary>An agent is triggered by the AI (delegation). A command is triggered by you (you type it).</details>
+        <p class="q">Q2. What does “skills-first” mean?</p>
+        <details><summary>Show answer</summary>New capabilities are added as skills (auto-grabbed) rather than commands you must type.</details>
+        <p class="q">Q3. What does <code>git log --oneline</code> show?</p>
+        <details><summary>Show answer</summary>A compact, one-line-per-commit list of the project's history so you can skim how it evolved.</details>
+        <div class="ex"><p class="lbl">Hands-on</p>On GitHub, open ECC's commits and read the 5 most recent messages. Are recent changes about skills, agents, or hooks?</div>
+      </div>
+    </section>
+
+    <!-- CH5 -->
+    <section id="ch5">
+      <h2><span class="chip">Ch 5</span>Rules &amp; Hooks</h2>
+      <p class="tag">Standards &amp; automation · Git: why config lives in the repo</p>
+
+      <div class="box plain"><p class="lbl">In plain words</p>
+        <p><strong>Rules</strong> = your <strong>non-negotiables</strong>, always true. Analogy: “never use pure black for text.” <strong>Hooks</strong> = <strong>automatic actions that fire on an event.</strong> Analogy: an export preset that auto-renames files the moment you export.</p>
+      </div>
+
+      <h3>How ECC actually does it</h3>
+      <p><strong>Rules</strong> (<code>rules/</code>) are split into <code>common/</code> (universal) plus one folder per language (TypeScript, Python, Go…) — 34 sets covering coding standards, security, testing, and git workflows. <strong>Hooks</strong> (<code>hooks/</code>) fire on tool events: block a bad action (e.g. a stray <code>console.log</code>), auto-format code, or save/restore session state. (Newer ECC auto-loads hooks — don't also declare them manually, or they load twice.)</p>
+
+      <div class="box git"><p class="lbl">Git in this chapter — what &amp; why</p>
+        <p><strong>Config belongs inside the repo so it travels.</strong> Anything set up only on your computer is invisible to others; anything <strong>committed into the repo</strong> goes everywhere the repo goes. That's why ECC ships rules and hooks as files. In Claude Code, committed project config lives in:</p>
+        <pre><code>.claude/settings.json</code></pre>
+        <p><strong>If you want it to apply everywhere, commit it. If it lives only on your laptop, it stays there.</strong></p>
+      </div>
+
+      <div class="box quiz"><p class="lbl">Check your understanding</p>
+        <p class="q">Q1. Difference between a rule and a hook?</p>
+        <details><summary>Show answer</summary>A rule is an always-follow guideline (what must be true). A hook is an automatic action that fires on an event.</details>
+        <p class="q">Q2. Why does ECC keep rules/hooks as committed files?</p>
+        <details><summary>Show answer</summary>Committed files travel with the repo, so everyone who clones it gets the same behavior. Local-only settings don't travel.</details>
+        <div class="ex"><p class="lbl">Hands-on</p>Write one rule you'd want an AI to always follow, e.g. “Always include descriptive alt text for every image.”</div>
+      </div>
+    </section>
+
+    <!-- CH6 -->
+    <section id="ch6">
+      <h2><span class="chip">Ch 6</span>MCP, Memory &amp; Continuous Learning</h2>
+      <p class="tag">Connecting outside tools · Git: versioning settings</p>
+
+      <div class="box plain"><p class="lbl">In plain words</p>
+        <p><strong>MCP</strong> = a <strong>standard plug</strong> for connecting the AI to outside tools (GitHub, databases, deploy platforms). Analogy: Figma <strong>plugins</strong> that let it talk to Jira or Unsplash. <strong>Memory</strong> = notes the AI keeps between sessions. <strong>Instincts / continuous learning</strong> = ECC watches your sessions, spots patterns, and turns them into reusable skills automatically.</p>
+      </div>
+
+      <h3>How ECC actually does it</h3>
+      <p><strong>MCP configs</strong> (<code>mcp-configs/</code>) ship ready-made connections (GitHub, Supabase, Vercel, Context7…). Tip: keep under ~10 enabled per project — each one consumes some of the AI's limited attention (“context window”). <strong>Memory</strong> uses hooks (Ch 5!) to save/restore context. <strong>Instincts</strong>: Stop-phase hooks extract patterns at session end and cluster them into new skills, with confidence scoring and evolution tracking. A loop: hooks → memory/instincts → new skills → a better AI.</p>
+
+      <div class="box git"><p class="lbl">Git in this chapter — what &amp; why</p>
+        <p><strong>Versioning your connections (don't hand-configure).</strong> ECC keeps MCP connections as committed files because that makes them <strong>reproducible</strong> (everyone gets the same setup), <strong>reviewable</strong> (changes show as diffs), and <strong>revertable</strong> (roll back a bad config). Same lesson as Ch 5: describe it in a file, commit the file.</p>
+      </div>
+
+      <div class="box quiz"><p class="lbl">Check your understanding</p>
+        <p class="q">Q1. In one line, what is MCP for?</p>
+        <details><summary>Show answer</summary>A standard way to connect the AI to outside tools — like a plugin socket.</details>
+        <p class="q">Q2. Why keep under ~10 MCPs enabled?</p>
+        <details><summary>Show answer</summary>Each connection consumes some of the AI's limited context window, crowding out the actual work.</details>
+        <p class="q">Q3. Which earlier block powers ECC's memory?</p>
+        <details><summary>Show answer</summary>Hooks — they save context at session end and restore it at the next start.</details>
+        <div class="ex"><p class="lbl">Hands-on</p>List two outside tools you'd want connected for design work (Figma, Drive, a font library…) and what you'd ask each to do.</div>
+      </div>
+    </section>
+
+    <!-- CH7 -->
+    <section id="ch7">
+      <h2><span class="chip">Ch 7</span>Installing ECC</h2>
+      <p class="tag">The 3 install paths · Git: <code>clone</code> vs <code>pull</code></p>
+
+      <div class="box plain"><p class="lbl">In plain words</p>
+        <p>Three ways to get ECC, like installing a font: <strong>Plugin install</strong> (from a built-in store — cleanest), <strong>Manual install</strong> (download + run installer — full control), <strong>Minimal</strong> (just the bit you need).</p>
+      </div>
+      <div class="warn">⚠️ ECC's own warning: <strong>don't mix install paths.</strong> Pick one and stick with it.</div>
+
+      <h3>How ECC actually does it</h3>
+      <p><strong>Path 1 — Plugin (recommended)</strong>, inside Claude Code:</p>
+      <pre><code>/plugin marketplace add https://github.com/affaan-m/ECC
+/plugin install ecc@ecc</code></pre>
+      <p><strong>Path 2 — Manual (full control):</strong></p>
+      <pre><code>git clone https://github.com/affaan-m/ECC.git
+cd ECC
+./install.sh --profile full     # macOS/Linux
+.\install.ps1 --profile full    # Windows</code></pre>
+      <p><strong>Path 3 — Minimal (rules only):</strong></p>
+      <pre><code>./install.sh --profile minimal --target claude</code></pre>
+
+      <div class="box git"><p class="lbl">Git in this chapter — what &amp; why</p>
+        <p>Two everyday commands you'll use forever:</p>
+        <table>
+          <tr><th>Command</th><th>When</th><th>Meaning</th></tr>
+          <tr><td><code>git clone &lt;url&gt;</code></td><td>First time</td><td>Download the whole repo</td></tr>
+          <tr><td><code>git pull</code></td><td>Anytime after</td><td>Fetch + apply newest changes</td></tr>
+        </table>
+        <p>You <code>clone</code> <strong>once</strong>; you <code>pull</code> <strong>whenever</strong> you want updates. (Path 1's <code>/plugin marketplace add</code> does the clone <em>for</em> you behind the scenes.)</p>
+      </div>
+
+      <div class="box quiz"><p class="lbl">Check your understanding</p>
+        <p class="q">Q1. Which path is recommended, and what two commands start it?</p>
+        <details><summary>Show answer</summary>The plugin install: <code>/plugin marketplace add …ECC</code> then <code>/plugin install ecc@ecc</code>.</details>
+        <p class="q">Q2. Difference between <code>git clone</code> and <code>git pull</code>?</p>
+        <details><summary>Show answer</summary><code>clone</code> downloads a repo the first time (creates a local copy); <code>pull</code> updates a copy you already have.</details>
+        <div class="ex"><p class="lbl">Hands-on</p>Open ECC's README install section. Which line is the <code>clone</code>? Which would update it later?</div>
+      </div>
+    </section>
+
+    <!-- CH8 -->
+    <section id="ch8">
+      <h2><span class="chip">Ch 8</span>Build Your Own — Capstone</h2>
+      <p class="tag">Make your first skill · Git: branch → commit → push → PR</p>
+
+      <div class="box plain"><p class="lbl">In plain words</p>
+        <p>You'll <strong>create your own skill</strong> — like the 249 in ECC — then walk the full git workflow real contributors use. We'll build a designer's skill: <strong><code>brand-checker</code></strong>, a card telling the AI how to review a design for brand &amp; accessibility basics. You won't break anything — git makes experiments safe and undoable.</p>
+      </div>
+
+      <h3>Part A — Write the skill</h3>
+      <p>Create this file at <code>skills/brand-checker/SKILL.md</code>:</p>
+      <pre><code>---
+name: brand-checker
+description: Use when reviewing a UI design or front-end for brand and accessibility basics.
+---
+
+# Brand Checker
+
+When reviewing a design or UI code, check these and report PASS/FIX:
+
+1. Color contrast: body text meets WCAG AA (4.5:1).
+2. Never pure black (#000000) for text — use the brand near-black.
+3. Headings use the brand display font; body uses the brand text font.
+4. Every image has descriptive alt text.
+5. Tap targets are at least 44x44px on mobile.
+6. Spacing follows an 8px scale (4/8/16/24/32...).
+
+End with a checklist: each item PASS or FIX, with a one-line reason for any FIX.</code></pre>
+      <p>Swap the fonts/colors for your own brand — that's the whole point.</p>
+
+      <h3>Part B — The git workflow, step by step</h3>
+      <pre><code>git checkout -b add-brand-checker-skill     # 1. make a safe branch
+# 2. create the SKILL.md file above
+git add skills/brand-checker/SKILL.md        # 3. stage it
+git commit -m "Add brand-checker skill"      # 4. snapshot + message
+git push -u origin add-brand-checker-skill   # 5. upload to GitHub</code></pre>
+      <p><strong>6. Open a Pull Request</strong> on GitHub (“Compare &amp; pull request”) — a proposal to add your branch into <code>main</code>, with a review step. This is exactly how ECC accepts contributions.</p>
+      <pre><code>branch → edit → add → commit → push → pull request → merge</code></pre>
+
+      <div class="box git"><p class="lbl">Git summary</p>
+        <table>
+          <tr><th>Command</th><th>What it does</th><th>Why</th></tr>
+          <tr><td><code>git checkout -b &lt;name&gt;</code></td><td>Make + switch to a branch</td><td>Work safely off <code>main</code></td></tr>
+          <tr><td><code>git add &lt;file&gt;</code></td><td>Stage changes</td><td>Choose what's in the snapshot</td></tr>
+          <tr><td><code>git commit -m "…"</code></td><td>Save a labeled snapshot</td><td>Record change + reason</td></tr>
+          <tr><td><code>git push -u origin &lt;name&gt;</code></td><td>Upload to GitHub</td><td>Share + back up</td></tr>
+          <tr><td>Pull Request</td><td>Propose + review</td><td>Approve before merging</td></tr>
+        </table>
+      </div>
+
+      <div class="box quiz"><p class="lbl">Check your understanding</p>
+        <p class="q">Q1. Order these: commit, push, branch, pull request, add.</p>
+        <details><summary>Show answer</summary>branch → add → commit → push → pull request (edit the file between branch and add).</details>
+        <p class="q">Q2. Why work on a branch instead of <code>main</code>?</p>
+        <details><summary>Show answer</summary>A branch is a safe parallel workspace; you experiment freely and others review before merging.</details>
+        <p class="q">Q3. Difference between <code>commit</code> and <code>push</code>?</p>
+        <details><summary>Show answer</summary><code>commit</code> saves a snapshot locally; <code>push</code> uploads your commits to GitHub.</details>
+        <div class="ex"><p class="lbl">Hands-on (the real one!)</p>Ask your assistant: <em>“create the brand-checker skill and commit it.”</em> Congratulations — you've authored a skill exactly like ECC's. 🎉</div>
+      </div>
+    </section>
+
+    <!-- GLOSSARY -->
+    <section id="glossary">
+      <h2><span class="chip">≡</span>Glossary</h2>
+      <p class="tag">Skim now, return often</p>
+      <h3>Git words</h3>
+      <table>
+        <tr><th>Term</th><th>Plain meaning</th></tr>
+        <tr><td>Repository (repo)</td><td>A project folder git tracks, with full version history</td></tr>
+        <tr><td>GitHub</td><td>A website that stores repos online</td></tr>
+        <tr><td>Clone</td><td>Download a full copy of a repo (<code>git clone &lt;url&gt;</code>)</td></tr>
+        <tr><td>Commit</td><td>A saved snapshot of changes, with a message</td></tr>
+        <tr><td>Branch</td><td>A parallel copy to experiment safely</td></tr>
+        <tr><td>Push / Pull</td><td>Upload commits to GitHub / download commits from GitHub</td></tr>
+        <tr><td>Pull Request (PR)</td><td>A proposal to add your changes, reviewed before merging</td></tr>
+        <tr><td>Merge</td><td>Accept a branch's changes into the main version</td></tr>
+      </table>
+      <h3>AI-assistant words</h3>
+      <table>
+        <tr><th>Term</th><th>Plain meaning</th></tr>
+        <tr><td>Harness</td><td>The app hosting the AI (Claude Code, Cursor…)</td></tr>
+        <tr><td>Agent</td><td>A specialist the AI delegates a sub-task to</td></tr>
+        <tr><td>Skill</td><td>An instruction card the AI loads automatically</td></tr>
+        <tr><td>Command</td><td>A typed shortcut (e.g. <code>/plan</code>)</td></tr>
+        <tr><td>Rule</td><td>An always-follow guideline</td></tr>
+        <tr><td>Hook</td><td>An automatic action triggered by an event</td></tr>
+        <tr><td>MCP</td><td>A standard way to connect the AI to outside tools</td></tr>
+        <tr><td>Instinct / memory</td><td>Patterns ECC saves so the AI keeps learning</td></tr>
+      </table>
+    </section>
+
+    <p class="foot">You started knowing none of these words. Now you can read ECC, explain its parts, follow its git workflow, and build your own tools. 👏<br>
+    Source repo: <a href="https://github.com/affaan-m/ECC" target="_blank" rel="noopener">github.com/affaan-m/ECC</a></p>
+
+  </div>
+  </main>
+</div>
+</body>
+</html>
